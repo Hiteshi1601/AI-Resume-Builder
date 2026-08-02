@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: ai-resume-builder-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5001
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_EXPIRES_IN
+        value: 1d
+      - key: ALLOWED_SITE
+        sync: false

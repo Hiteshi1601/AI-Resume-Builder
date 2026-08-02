@@ -34,25 +34,37 @@ function RichTextEditor({ onRichTextEditorChange, index, resumeInfo }) {
 
   const GenerateSummaryFromAI = async () => {
     if (!resumeInfo?.experience[index]?.title) {
-      toast("Please Add Position Title");
+      toast.error("Please Add Position Title first");
       return;
     }
     setLoading(true);
 
-    const prompt = PROMPT.replace(
-      "{positionTitle}",
-      resumeInfo.experience[index].title
-    );
-    const result = await AIChatSession.sendMessage(prompt);
-    console.log(typeof result.response.text());
-    console.log(JSON.parse(result.response.text()));
-    const resp = JSON.parse(result.response.text());
-    await setValue(
-      resp.experience
-        ? resp.experience?.join("")
-        : resp.experience_bullets?.join("")
-    );
-    setLoading(false);
+    try {
+      const prompt = PROMPT.replace(
+        "{positionTitle}",
+        resumeInfo.experience[index].title
+      );
+      const result = await AIChatSession.sendMessage(prompt);
+      const rawText = await result.response.text();
+      const cleanText = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const resp = JSON.parse(cleanText);
+      await setValue(
+        resp.experience
+          ? resp.experience?.join("")
+          : resp.experience_bullets?.join("")
+      );
+      toast.success("AI Summary generated");
+    } catch (error) {
+      console.error("RichTextEditor AI Error:", error);
+      const errMsg = error?.message || "Failed to generate AI summary";
+      if (errMsg.includes("API key") || errMsg.includes("API_KEY") || errMsg.includes("400")) {
+        toast.error("Invalid or missing Gemini API Key in Frontend/.env.local");
+      } else {
+        toast.error(errMsg);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

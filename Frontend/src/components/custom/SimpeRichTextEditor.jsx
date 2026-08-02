@@ -34,25 +34,37 @@ function SimpeRichTextEditor({ index, onRichTextEditorChange, resumeInfo }) {
   }, [value]);
 
   const GenerateSummaryFromAI = async () => {
-    if (
-      !resumeInfo?.projects[index]?.projectName ||
-      !resumeInfo?.projects[index]?.techStack
-    ) {
-      toast("Add Project Name and Tech Stack to generate summary");
-      return;
-    }
-    setLoading(true);
+    const currentProj = resumeInfo?.projects?.[index] || {};
+    const projName = currentProj.projectName || "Full Stack Project";
+    const stack = currentProj.techStack || "React, Node.js, Express, MongoDB";
 
-    const prompt = PROMPT.replace(
-      "{projectName}",
-      resumeInfo?.projects[index]?.projectName
-    ).replace("{techStack}", resumeInfo?.projects[index]?.techStack);
-    console.log("Prompt", prompt);
-    const result = await AIChatSession.sendMessage(prompt);
-    const resp = JSON.parse(result.response.text());
-    console.log("Response", resp);
-    await setValue(resp.projectSummary?.join(""));
-    setLoading(false);
+    setLoading(true);
+    try {
+      const prompt = PROMPT.replace("{projectName}", projName).replace("{techStack}", stack);
+      console.log("Prompt:", prompt);
+      const result = await AIChatSession.sendMessage(prompt);
+      const rawText = await result.response.text();
+      const cleanText = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const resp = JSON.parse(cleanText);
+      console.log("Response:", resp);
+
+      const summaryHTML = Array.isArray(resp.projectSummary)
+        ? resp.projectSummary.join("")
+        : typeof resp.projectSummary === "string"
+        ? resp.projectSummary
+        : Array.isArray(resp.experience)
+        ? resp.experience.join("")
+        : `<li>Developed <strong>${projName}</strong> using ${stack}.</li>`;
+
+      setValue(summaryHTML);
+      onRichTextEditorChange(summaryHTML);
+      toast.success("Project summary generated");
+    } catch (error) {
+      console.error("Project AI Error:", error);
+      toast.error(error?.message || "Failed to generate project summary");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -40,10 +40,10 @@ function Summary({ resumeInfo, enanbledNext, enanbledPrev }) {
     if (resume_id) {
       updateThisResume(resume_id, data)
         .then((data) => {
-          toast("Resume Updated", "success");
+          toast.success("Resume Updated");
         })
         .catch((error) => {
-          toast("Error updating resume", `${error.message}`);
+          toast.error(error?.message || "Error updating resume");
         })
         .finally(() => {
           enanbledNext(true);
@@ -51,7 +51,7 @@ function Summary({ resumeInfo, enanbledNext, enanbledPrev }) {
           setLoading(false);
         });
     }
-  }; // Declare the undeclared variable using useState
+  };
 
   const setSummery = (summary) => {
     dispatch(
@@ -65,21 +65,28 @@ function Summary({ resumeInfo, enanbledNext, enanbledPrev }) {
 
   const GenerateSummeryFromAI = async () => {
     setLoading(true);
-    console.log("Generate Summery From AI for", resumeInfo?.jobTitle);
+    console.log("Generate Summary From AI for", resumeInfo?.jobTitle);
     if (!resumeInfo?.jobTitle) {
-      toast("Please Add Job Title");
+      toast.error("Please Add Job Title first");
       setLoading(false);
       return;
     }
     const PROMPT = prompt.replace("{jobTitle}", resumeInfo?.jobTitle);
     try {
       const result = await AIChatSession.sendMessage(PROMPT);
-      console.log(JSON.parse(result.response.text()));
-      setAiGenerateSummeryList(JSON.parse(result.response.text()));
-      toast("Summery Generated", "success");
+      const rawText = await result.response.text();
+      const cleanText = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const parsedData = JSON.parse(cleanText);
+      setAiGenerateSummeryList(parsedData);
+      toast.success("Summary Generated");
     } catch (error) {
-      console.log(error);
-      toast("${error.message}", `${error.message}`);
+      console.error("AI Summary Error:", error);
+      const errMsg = error?.message || "Failed to generate AI summary";
+      if (errMsg.includes("API key") || errMsg.includes("API_KEY") || errMsg.includes("400")) {
+        toast.error("Invalid or missing Gemini API Key in Frontend/.env.local");
+      } else {
+        toast.error(errMsg);
+      }
     } finally {
       setLoading(false);
     }
