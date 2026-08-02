@@ -59,12 +59,15 @@ const registerUser = async (req, res) => {
       )
     );
   } catch (err) {
-    // Change the error parameter to err
     console.log("Registration Failed due to server error");
     console.error("Error while creating user:", err);
+    const msg =
+      err?.name === "MongooseServerSelectionError"
+        ? "Database connection failed. Please check MONGODB_URI in Render settings."
+        : err?.message || "Internal Server Error.";
     return res
       .status(500)
-      .json(new ApiError(500, "Internal Server Error.", [], err.stack));
+      .json(new ApiError(500, msg, [], err.stack));
   }
   // return res.status(200).send("Hello WOrld")
 };
@@ -100,19 +103,20 @@ const loginUser = async (req, res) => {
       return res.status(406).json(new ApiError(406, "Invalid credentials."));
     }
 
-    const jwtToken = jwt.sign(
-      { id: user.id },
-      process.env.JWT_SECRET_KEY,
-      { expiresIn: process.env.JWT_SECRET_EXPIRES_IN } // Add token expiration for better security
-    );
+    const secretKey =
+      process.env.JWT_SECRET_KEY || "super_secret_jwt_key_resume_builder_2026";
+    const secretExpiresIn = process.env.JWT_SECRET_EXPIRES_IN || "7d";
+
+    const jwtToken = jwt.sign({ id: user.id }, secretKey, {
+      expiresIn: secretExpiresIn,
+    });
 
     const cookieOptions = {
       httpOnly: true,
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // Set cookie to expire in 1 day
-      sameSite: process.env.NODE_ENV == "Dev" ? "lax" : "none", // Set SameSite attribute for better security
-      secure: process.env.NODE_ENV == "Dev" ? false : true, // Set Secure attribute for better security
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      sameSite: process.env.NODE_ENV === "Dev" ? "lax" : "none",
+      secure: process.env.NODE_ENV === "Dev" ? false : true,
     };
-    
 
     console.log("Login Successful");
     return res
@@ -134,9 +138,11 @@ const loginUser = async (req, res) => {
   } catch (err) {
     console.log("Login Failed: Server error");
     console.error("Error during login:", err);
-    return res
-      .status(500)
-      .json(new ApiError(500, "Internal Server Error", [], err.stack));
+    const msg =
+      err?.name === "MongooseServerSelectionError"
+        ? "Database connection failed. Please check MONGODB_URI in Render settings."
+        : err?.message || "Internal Server Error";
+    return res.status(500).json(new ApiError(500, msg, [], err.stack));
   }
 };
 
