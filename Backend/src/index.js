@@ -3,8 +3,17 @@ import { connectDB } from "./db/index.js";
 import { config } from "dotenv";
 config();
 
-connectDB().then(() => {
-  app.listen(process.env.PORT, () => {
-    console.log("Server is running on http://localhost:" + process.env.PORT);
+const PORT = process.env.PORT || 5001;
+
+connectDB()
+  .then((conn) => {
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  })
+  .catch((err) => {
+    console.error("MongoDB connection warning:", err?.message || err);
+  })
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
   });
-});
